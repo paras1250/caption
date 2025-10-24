@@ -1,0 +1,7 @@
+{
+  "name": "Singer",
+  "description": "An application to automatically generate and style synchronized captions for music. Upload a file, describe the song's mood, and watch as AI generates beautiful, animated lyrics that match the vibe.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}

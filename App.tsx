@@ -3,7 +3,7 @@ import { FileUpload } from './components/FileUpload';
 import { CaptionPreview } from './components/CaptionPreview';
 import { Timeline } from './components/Timeline';
 import { ExportModal } from './components/ExportModal';
-import { LoaderIcon, RefreshCwIcon, AlertCircleIcon } from './components/Icons';
+import { RefreshCwIcon } from './components/Icons';
 import { generateCaptions } from './services/geminiService';
 import type { CaptionLine, ThemeName, ThemeConfig, EditorState, ExportStatus, AspectRatio } from './types';
 import { THEMES } from './constants';
@@ -144,7 +144,7 @@ const App: React.FC = () => {
       }
     } catch (e: any) {
       console.error(e);
-      setError('Analysis failed. Try another audio track.');
+      setError('Analysis failed. Ensure your API key is correctly set in the environment variables.');
     } finally {
       setIsLoading(false);
     }
@@ -456,6 +456,7 @@ const App: React.FC = () => {
                     </div>
 
                     {error && <div className="mc-panel bg-[#FF5555] text-white p-4 mc-text-shadow font-mono">{error}</div>}
+                    
                     <button 
                       onClick={handleGenerateClick} 
                       disabled={isLoading || !file} 
@@ -463,6 +464,10 @@ const App: React.FC = () => {
                     >
                       {isLoading ? <span className="mc-pulse">ANALYZING...</span> : 'START GENERATION'}
                     </button>
+                    
+                    <p className="text-xs text-[#373737] font-mono mt-4 text-center">
+                      ENSURE API_KEY IS SET IN PROJECT SETTINGS
+                    </p>
                   </div>
                 ) : (
                   <CaptionEditor

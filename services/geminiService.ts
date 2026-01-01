@@ -1,7 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import type { CaptionLine } from '../types';
 
-// Utility to parse "mm:ss.ms" into seconds
 const parseTimestamp = (time: string): number => {
   if (!time) return 0;
   const parts = time.split(':');
@@ -11,7 +10,6 @@ const parseTimestamp = (time: string): number => {
   return parseInt(minutes, 10) * 60 + parseFloat(seconds);
 };
 
-// Utility to convert a File object to a GoogleGenerativeAI.Part object
 const fileToGenerativePart = async (file: File) => {
   const base64EncodedDataPromise = new Promise<string>((resolve) => {
     const reader = new FileReader();
@@ -27,11 +25,12 @@ const fileToGenerativePart = async (file: File) => {
 };
 
 export const generateCaptions = async (file: File): Promise<CaptionLine[]> => {
-  /**
-   * We instantiate GoogleGenAI inside the function to ensure the API_KEY is accessed 
-   * at call time, preventing crashes during script initialization.
-   */
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) {
+    throw new Error('API Key is missing. Please set it as an environment variable (API_KEY).');
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
 
   const systemInstruction = `
     You are a world-class creative assistant specializing in analyzing audio files and generating synchronized song lyrics.
@@ -58,7 +57,7 @@ export const generateCaptions = async (file: File): Promise<CaptionLine[]> => {
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-pro-preview",
+      model: "gemini-3-flash-preview",
       contents: { parts: [audioPart, {text: prompt}] },
       config: {
         systemInstruction: systemInstruction,

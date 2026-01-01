@@ -1,6 +1,30 @@
 import type { Theme, ThemeName } from './types';
 
 export const THEMES: Record<ThemeName, Theme> = {
+  minecraft: {
+    name: 'minecraft',
+    label: 'Minecraft',
+    description: 'Diamond ore aesthetic with pixel-perfect 3D text.',
+    config: {
+      textColor: '#55FFFF',
+      fontWeight: '400',
+      backgroundStyle: 'solid',
+      solidBackgroundColor: '#4a4a4a',
+      fontFamily: 'VT323',
+      textAlign: 'center',
+      fontSize: 10,
+      fontStyle: 'normal',
+      glowEnabled: false,
+      glowColor: '#55FFFF',
+      strokeEnabled: false,
+      strokeColor: '#000000',
+      strokeWidth: 2,
+      gradientEnabled: false,
+      gradientColor1: '#55FFFF',
+      gradientColor2: '#FFFFFF',
+      maxLines: 1,
+    }
+  },
   neon: {
     name: 'neon',
     label: 'Neon Glow',
@@ -12,7 +36,7 @@ export const THEMES: Record<ThemeName, Theme> = {
       solidBackgroundColor: '#000000',
       fontFamily: 'Poppins',
       textAlign: 'center',
-      fontSize: 60,
+      fontSize: 10,
       fontStyle: 'normal',
       glowEnabled: true,
       glowColor: '#06B6D4',
@@ -22,6 +46,7 @@ export const THEMES: Record<ThemeName, Theme> = {
       gradientEnabled: false,
       gradientColor1: '#A78BFA',
       gradientColor2: '#F472B6',
+      maxLines: 1,
     }
   },
   gradient: {
@@ -35,7 +60,7 @@ export const THEMES: Record<ThemeName, Theme> = {
       solidBackgroundColor: '#000000',
       fontFamily: 'Montserrat',
       textAlign: 'center',
-      fontSize: 64,
+      fontSize: 10,
       fontStyle: 'normal',
       glowEnabled: false,
       glowColor: '#FFFFFF',
@@ -45,6 +70,7 @@ export const THEMES: Record<ThemeName, Theme> = {
       gradientEnabled: true,
       gradientColor1: '#A78BFA', // violet-400
       gradientColor2: '#F472B6', // pink-400
+      maxLines: 1,
     }
   },
   minimal: {
@@ -58,7 +84,7 @@ export const THEMES: Record<ThemeName, Theme> = {
       solidBackgroundColor: '#000000',
       fontFamily: 'Lato',
       textAlign: 'center',
-      fontSize: 56,
+      fontSize: 10,
       fontStyle: 'normal',
       glowEnabled: false,
       glowColor: '#FFFFFF',
@@ -68,6 +94,7 @@ export const THEMES: Record<ThemeName, Theme> = {
       gradientEnabled: false,
       gradientColor1: '#A78BFA',
       gradientColor2: '#F472B6',
+      maxLines: 1,
     }
   },
   cinematic: {
@@ -81,7 +108,7 @@ export const THEMES: Record<ThemeName, Theme> = {
       solidBackgroundColor: '#000000',
       fontFamily: 'Lato',
       textAlign: 'center',
-      fontSize: 52,
+      fontSize: 10,
       fontStyle: 'normal',
       glowEnabled: false,
       glowColor: '#000000',
@@ -91,6 +118,7 @@ export const THEMES: Record<ThemeName, Theme> = {
       gradientEnabled: false,
       gradientColor1: '#A78BFA',
       gradientColor2: '#F472B6',
+      maxLines: 1,
     }
   },
   signature: {
@@ -104,7 +132,7 @@ export const THEMES: Record<ThemeName, Theme> = {
       solidBackgroundColor: '#000000',
       fontFamily: 'Pacifico',
       textAlign: 'center',
-      fontSize: 72,
+      fontSize: 10,
       fontStyle: 'normal',
       glowEnabled: false,
       glowColor: '#FFFFFF',
@@ -114,6 +142,7 @@ export const THEMES: Record<ThemeName, Theme> = {
       gradientEnabled: false,
       gradientColor1: '#A78BFA',
       gradientColor2: '#F472B6',
+      maxLines: 1,
     }
   },
 };

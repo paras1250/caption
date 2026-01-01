@@ -15,10 +15,10 @@ const initialThemeConfigs = Object.fromEntries(
 
 const initialEditorState: EditorState = {
   captions: null,
-  theme: 'neon',
+  theme: 'minecraft',
   themeConfigs: initialThemeConfigs,
   backgroundImage: null,
-  captionPosition: 'bottom-center',
+  captionPosition: { x: 50, y: 80 },
   aspectRatio: '16:9',
 };
 
@@ -64,7 +64,7 @@ const App: React.FC = () => {
       return {
         past: [...currentHistory.past, currentHistory.present],
         present: newPresent,
-        future: [], // Clear future on new action
+        future: [],
       };
     });
   };
@@ -75,7 +75,6 @@ const App: React.FC = () => {
   const handleUndo = useCallback(() => {
     setHistory(currentHistory => {
       if (currentHistory.past.length === 0) return currentHistory;
-
       const newPast = [...currentHistory.past];
       const newPresent = newPast.pop()!;
       return {
@@ -89,7 +88,6 @@ const App: React.FC = () => {
   const handleRedo = useCallback(() => {
     setHistory(currentHistory => {
       if (currentHistory.future.length === 0) return currentHistory;
-
       const newFuture = [...currentHistory.future];
       const newPresent = newFuture.shift()!;
       return {
@@ -102,38 +100,25 @@ const App: React.FC = () => {
   
   const handleThemeConfigChange = (newConfig: ThemeConfig) => {
     setState({
-      themeConfigs: {
-        ...themeConfigs,
-        [theme]: newConfig,
-      }
+      themeConfigs: { ...themeConfigs, [theme]: newConfig }
     });
   };
 
   useEffect(() => {
-    return () => {
-      if (audioSrc) URL.revokeObjectURL(audioSrc);
-      // Background image is part of history, revoking should be handled carefully
-      // For simplicity, we assume URLs are stable during session
-    };
+    return () => { if (audioSrc) URL.revokeObjectURL(audioSrc); };
   }, [audioSrc]);
 
   const handleUpdateCaptionTime = (index: number, newStartTime: number, newEndTime: number) => {
     if (!captions) return;
-    
-    const newCaptions = [...captions];
-    const caption = newCaptions[index];
-    
-    if (caption) {
-      caption.startTime = newStartTime;
-      caption.endTime = newEndTime;
-      // Use overwrite to prevent creating history for every mouse move drag
-      setState({ captions: newCaptions }, true);
-    }
+    const newCaptions = captions.map((c, i) => 
+      i === index ? { ...c, startTime: newStartTime, endTime: newEndTime } : c
+    );
+    // Use overwrite=true during dragging to prevent massive history bloat
+    setState({ captions: newCaptions }, true);
   };
 
   const handleFileSelect = (selectedFile: File) => {
     setFile(selectedFile);
-    // Reset relevant parts of history
     setState({ captions: null });
     setCurrentTime(0);
     setIsPlaying(false);
@@ -143,7 +128,7 @@ const App: React.FC = () => {
   
   const handleGenerateClick = useCallback(async () => {
     if (!file) {
-      setError('No audio file found. Please upload a file again.');
+      setError('No audio file found.');
       return;
     }
     setIsLoading(true);
@@ -156,13 +141,11 @@ const App: React.FC = () => {
       if (audioRef.current) {
         audioRef.current.currentTime = 0;
         setCurrentTime(0);
-        if (audioRef.current.paused) {
-          audioRef.current.play().catch(console.error);
-        }
+        if (audioRef.current.paused) audioRef.current.play().catch(console.error);
       }
     } catch (e) {
       console.error(e);
-      setError('Failed to generate captions. The AI may not have been able to process this audio file. Please try again.');
+      setError('Analysis failed. Try another audio track.');
     } finally {
       setIsLoading(false);
     }
@@ -194,7 +177,6 @@ const App: React.FC = () => {
     if (!captions) return;
     const caption = captions[index];
     if (!caption.emoji) return;
-
     const newCaptions = [...captions];
     newCaptions[index] = {
       ...caption,
@@ -211,17 +193,13 @@ const App: React.FC = () => {
     setState({ captions: newCaptions });
   };
 
-
   const handleAddCaption = () => {
     const newCaption: CaptionLine = {
       startTime: currentTime,
-      endTime: currentTime + 3, // Default 3 second duration
-      text: 'New Caption',
+      endTime: currentTime + 3,
+      text: 'New Line',
     };
-    
-    const updatedCaptions = [...(captions || []), newCaption].sort(
-      (a, b) => a.startTime - b.startTime
-    );
+    const updatedCaptions = [...(captions || []), newCaption].sort((a, b) => a.startTime - b.startTime);
     setState({ captions: updatedCaptions });
   };
 
@@ -239,19 +217,14 @@ const App: React.FC = () => {
   };
 
   const handleBackgroundImageSelect = (imageFile: File) => {
-    if (backgroundImage) {
-      URL.revokeObjectURL(backgroundImage);
-    }
+    if (backgroundImage) URL.revokeObjectURL(backgroundImage);
     setState({ backgroundImage: URL.createObjectURL(imageFile) });
   };
 
-  const handleRemoveBackgroundImage = () => {
-    setState({ backgroundImage: null });
-  };
+  const handleRemoveBackgroundImage = () => setState({ backgroundImage: null });
 
   const activeThemeStyle = useMemo(() => {
     if (!activeThemeConfig) return {};
-
     const FONT_MAP: Record<string, string> = {
         Montserrat: '"Montserrat", sans-serif',
         Poppins: '"Poppins", sans-serif',
@@ -260,6 +233,7 @@ const App: React.FC = () => {
         Lato: '"Lato", sans-serif',
         'Great Vibes': '"Great Vibes", cursive',
         'Dancing Script': '"Dancing Script", cursive',
+        'VT323': '"VT323", monospace',
     };
 
     const style: React.CSSProperties = {
@@ -268,7 +242,16 @@ const App: React.FC = () => {
       textAlign: activeThemeConfig.textAlign,
       fontSize: `${activeThemeConfig.fontSize}px`,
       fontStyle: activeThemeConfig.fontStyle,
+      whiteSpace: activeThemeConfig.maxLines === 1 ? 'nowrap' : 'normal',
+      maxWidth: activeThemeConfig.maxLines === 1 ? 'none' : '80%',
+      wordBreak: 'break-word',
     };
+
+    if (activeThemeConfig.fontFamily === 'VT323') {
+        (style as any).textTransform = 'uppercase';
+        (style as any).letterSpacing = '2px';
+        (style as any).imageRendering = 'pixelated';
+    }
 
     if (activeThemeConfig.gradientEnabled) {
       style.background = `linear-gradient(to right, ${activeThemeConfig.gradientColor1}, ${activeThemeConfig.gradientColor2})`;
@@ -280,16 +263,17 @@ const App: React.FC = () => {
     }
     
     const textShadows: string[] = [];
-    if (activeThemeConfig.glowEnabled) {
+    if (activeThemeConfig.fontFamily === 'VT323') {
+        textShadows.push(`2px 2px 0px #3f3f3f`);
+        textShadows.push(`4px 4px 0px #000000`);
+    } else if (activeThemeConfig.glowEnabled) {
       textShadows.push(`0 0 8px ${activeThemeConfig.glowColor}`);
       textShadows.push(`0 0 12px ${activeThemeConfig.glowColor}`);
     } else if (!activeThemeConfig.strokeEnabled && !activeThemeConfig.gradientEnabled) {
       textShadows.push('2px 2px 5px rgba(0,0,0,0.7)');
     }
 
-    if (textShadows.length > 0) {
-      style.textShadow = textShadows.join(', ');
-    }
+    if (textShadows.length > 0) style.textShadow = textShadows.join(', ');
     
     if (activeThemeConfig.strokeEnabled) {
         style.WebkitTextStroke = `${activeThemeConfig.strokeWidth}px ${activeThemeConfig.strokeColor}`;
@@ -297,47 +281,38 @@ const App: React.FC = () => {
     }
 
     switch (activeThemeConfig.backgroundStyle) {
-      case 'solid':
-        style.backgroundColor = activeThemeConfig.solidBackgroundColor; break;
-      case 'translucent':
-        style.backgroundColor = 'rgba(0, 0, 0, 0.5)'; break;
-      case 'none': default:
-        style.backgroundColor = 'transparent'; break;
+      case 'solid': style.backgroundColor = activeThemeConfig.solidBackgroundColor; break;
+      case 'translucent': style.backgroundColor = 'rgba(0, 0, 0, 0.5)'; break;
+      case 'none': default: style.backgroundColor = 'transparent'; break;
     }
     if (activeThemeConfig.backgroundStyle !== 'none') {
         style.padding = '0.25rem 0.5rem';
-        style.borderRadius = '0.375rem';
+        style.borderRadius = '0';
+        if (activeThemeConfig.fontFamily === 'VT323') style.border = '4px solid #000';
     }
     return style;
   }, [activeThemeConfig]);
 
   const handleExportMp4 = useCallback(async () => {
     if (!file || !captions || !audioRef.current) return;
-
     setIsExporting(true);
     setExportStatus({ step: 'initializing', progress: 0 });
     setModalContent('mp4');
     setIsModalOpen(true);
 
-    const getExportDimensions = (ratio: AspectRatio): { width: number, height: number } => {
+    const getExportDimensions = (ratio: AspectRatio) => {
         switch (ratio) {
             case '9:16': return { width: 720, height: 1280 };
             case '1:1': return { width: 1080, height: 1080 };
             case '4:5': return { width: 1080, height: 1350 };
-            case '16:9': default: return { width: 1280, height: 720 };
+            default: return { width: 1280, height: 720 };
         }
     };
     const { width: exportWidth, height: exportHeight } = getExportDimensions(aspectRatio);
-
     const canvas = document.createElement('canvas');
-    canvas.width = exportWidth;
-    canvas.height = exportHeight;
+    canvas.width = exportWidth; canvas.height = exportHeight;
     const ctx = canvas.getContext('2d');
-    if (!ctx) {
-        setError('Could not create canvas context for export.');
-        setIsExporting(false);
-        return;
-    }
+    if (!ctx) { setIsExporting(false); return; }
 
     try {
         const audio = audioRef.current;
@@ -345,186 +320,92 @@ const App: React.FC = () => {
         const audioSource = audioContext.createMediaElementSource(audio);
         const audioDestination = audioContext.createMediaStreamDestination();
         audioSource.connect(audioDestination);
-        
         const videoStream = canvas.captureStream(30);
-        const combinedStream = new MediaStream([
-            videoStream.getVideoTracks()[0],
-            audioDestination.stream.getAudioTracks()[0]
-        ]);
-
+        const combinedStream = new MediaStream([videoStream.getVideoTracks()[0], audioDestination.stream.getAudioTracks()[0]]);
         const recorder = new MediaRecorder(combinedStream, { mimeType: 'video/webm' });
         const chunks: Blob[] = [];
-        recorder.ondataavailable = (event) => chunks.push(event.data);
+        recorder.ondataavailable = (e) => chunks.push(e.data);
         recorder.onstop = () => {
             setExportStatus({ step: 'done', progress: 100 });
             const blob = new Blob(chunks, { type: 'video/webm' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = url;
-            a.download = `${file.name.split('.')[0]}_video.mp4`;
-            a.click();
-            URL.revokeObjectURL(url);
-            
-            setTimeout(() => {
-                setIsModalOpen(false);
-                setIsExporting(false);
-                setExportStatus({ step: 'idle', progress: 0 });
-            }, 1500);
+            a.href = url; a.download = `${file.name.split('.')[0]}_lyric_video.mp4`;
+            a.click(); URL.revokeObjectURL(url);
+            setTimeout(() => { setIsModalOpen(false); setIsExporting(false); }, 1500);
         };
-        
         const bgImage = new Image();
         bgImage.crossOrigin = "anonymous";
-        let imageLoaded = false;
         if (backgroundImage) {
             bgImage.src = backgroundImage;
-            await new Promise((resolve, reject) => {
-                bgImage.onload = resolve;
-                bgImage.onerror = reject;
-            });
-            imageLoaded = true;
+            await new Promise((res, rej) => { bgImage.onload = res; bgImage.onerror = rej; });
         }
-
-        recorder.start();
-        audio.currentTime = 0;
-        await audio.play();
-
-        const totalDuration = audio.duration;
-        let lastTime = -1;
-
+        recorder.start(); audio.currentTime = 0; await audio.play();
         const drawFrame = () => {
-            const currentTime = audio.currentTime;
-            if (currentTime === lastTime) { // Avoid re-drawing if time hasn't advanced
-                if (currentTime < totalDuration) requestAnimationFrame(drawFrame);
-                return;
-            }
-            lastTime = currentTime;
-
+            const time = audio.currentTime;
             ctx.clearRect(0, 0, exportWidth, exportHeight);
-            ctx.fillStyle = '#111827';
-            ctx.fillRect(0, 0, exportWidth, exportHeight);
-
-            if (imageLoaded) {
-                const canvasAspect = exportWidth / exportHeight;
-                const imgAspect = bgImage.width / bgImage.height;
-                let sx = 0, sy = 0, sWidth = bgImage.width, sHeight = bgImage.height;
-                if (imgAspect > canvasAspect) {
-                    sWidth = bgImage.height * canvasAspect;
-                    sx = (bgImage.width - sWidth) / 2;
-                } else {
-                    sHeight = bgImage.width / canvasAspect;
-                    sy = (bgImage.height - sHeight) / 2;
-                }
-                ctx.drawImage(bgImage, sx, sy, sWidth, sHeight, 0, 0, exportWidth, exportHeight);
+            ctx.fillStyle = '#000000'; ctx.fillRect(0, 0, exportWidth, exportHeight);
+            if (backgroundImage) {
+                const cAspect = exportWidth / exportHeight; const iAspect = bgImage.width / bgImage.height;
+                let sx=0, sy=0, sw=bgImage.width, sh=bgImage.height;
+                if (iAspect > cAspect) { sw = bgImage.height * cAspect; sx = (bgImage.width - sw) / 2; }
+                else { sh = bgImage.width / cAspect; sy = (bgImage.height - sh) / 2; }
+                ctx.drawImage(bgImage, sx, sy, sw, sh, 0, 0, exportWidth, exportHeight);
             }
-
-            const currentCaption = captions.find(c => currentTime >= c.startTime && currentTime <= c.endTime);
-            if (currentCaption) {
-                const textToRender = `${currentCaption.emoji || ''} ${currentCaption.text}`.trim();
+            const cap = captions.find(c => time >= c.startTime && time <= c.endTime);
+            if (cap) {
+                let text = (activeThemeConfig.fontFamily === 'VT323' ? `${cap.emoji || ''} ${cap.text}`.toUpperCase() : `${cap.emoji || ''} ${cap.text}`).trim();
                 const style = activeThemeConfig;
                 ctx.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize}px "${style.fontFamily}"`;
                 ctx.textAlign = style.textAlign as CanvasTextAlign;
                 
-                const [vAlign, hAlign] = captionPosition.split('-');
-                let x = exportWidth / 2;
-                if (hAlign === 'left') x = 50;
-                if (hAlign === 'right') x = exportWidth - 50;
+                const x = (captionPosition.x / 100) * exportWidth;
+                const y = (captionPosition.y / 100) * exportHeight;
+                ctx.textBaseline = 'middle';
 
-                let y = exportHeight - 100;
-                if (vAlign === 'top') y = 100;
-                if (vAlign === 'middle') y = exportHeight / 2;
-                
-                ctx.textBaseline = vAlign === 'top' ? 'top' : vAlign === 'middle' ? 'middle' : 'bottom';
-                const yPos = y;
-
-
-                if (style.backgroundStyle !== 'none') {
-                    ctx.fillStyle = style.backgroundStyle === 'solid' ? style.solidBackgroundColor : 'rgba(0,0,0,0.5)';
-                    const textMetrics = ctx.measureText(textToRender);
-                    const paddingH = 20;
-                    const paddingV = 10;
-                    
-                    let rectX = x - (textMetrics.actualBoundingBoxLeft);
-                    if(style.textAlign === 'right' || hAlign === 'right') {
-                       rectX = x - textMetrics.width - paddingH;
-                    } else if (style.textAlign === 'center' || hAlign === 'center') {
-                       rectX = x - (textMetrics.width / 2) - paddingH;
-                    } else if (style.textAlign === 'left' || hAlign === 'left') {
-                       rectX = x - paddingH;
+                // Handle basic 2-line split for export
+                const lines = [];
+                if (style.maxLines === 2 && text.length > 20 && text.includes(' ')) {
+                    const mid = Math.floor(text.length / 2);
+                    const before = text.lastIndexOf(' ', mid);
+                    const after = text.indexOf(' ', mid);
+                    let splitPos = (mid - before < after - mid) ? before : after;
+                    if (splitPos === -1) splitPos = before !== -1 ? before : after;
+                    if (splitPos !== -1) {
+                        lines.push(text.substring(0, splitPos).trim());
+                        lines.push(text.substring(splitPos).trim());
+                    } else {
+                        lines.push(text);
                     }
-                    
-                    const textHeight = textMetrics.actualBoundingBoxAscent + textMetrics.actualBoundingBoxDescent;
-                    const rectY = yPos - textMetrics.actualBoundingBoxAscent - paddingV;
-                    const rectHeight = textHeight + (paddingV * 2);
-                    ctx.fillRect(rectX, rectY, textMetrics.width + paddingH * 2, rectHeight);
-                }
-                
-                ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
-                ctx.lineWidth = 0; ctx.strokeStyle = 'transparent';
-
-                if (style.strokeEnabled && style.strokeWidth > 0) {
-                    ctx.strokeStyle = style.strokeColor;
-                    ctx.lineWidth = style.strokeWidth * 2;
-                    ctx.lineJoin = 'round';
-                    ctx.strokeText(textToRender, x, yPos);
-                }
-
-                if (style.glowEnabled) {
-                    ctx.shadowColor = style.glowColor;
-                    ctx.shadowBlur = 15;
-                } else if (!style.strokeEnabled && !style.gradientEnabled) {
-                    ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
-                    ctx.shadowBlur = 5;
-                    ctx.shadowOffsetX = 2;
-                    ctx.shadowOffsetY = 2;
-                }
-
-                if (style.gradientEnabled) {
-                    const textMetrics = ctx.measureText(textToRender);
-                    const gradient = ctx.createLinearGradient(x - textMetrics.width / 2, yPos, x + textMetrics.width / 2, yPos);
-                    gradient.addColorStop(0, style.gradientColor1);
-                    gradient.addColorStop(1, style.gradientColor2);
-                    ctx.fillStyle = gradient;
                 } else {
-                    ctx.fillStyle = style.textColor;
+                    lines.push(text);
                 }
-                ctx.fillText(textToRender, x, yPos);
-            }
-            
-            setExportStatus({ step: 'rendering', progress: (currentTime / totalDuration) * 100 });
 
-            if (currentTime < totalDuration) {
-                requestAnimationFrame(drawFrame);
-            } else {
-                setExportStatus({ step: 'encoding', progress: 100 });
-                recorder.stop();
-                audio.pause();
+                lines.forEach((line, idx) => {
+                    const lineY = y + (idx - (lines.length - 1) / 2) * (style.fontSize * 1.2);
+                    if (style.fontFamily === 'VT323') {
+                        ctx.fillStyle = '#3f3f3f'; ctx.fillText(line, x+4, lineY+4);
+                        ctx.fillStyle = '#000000'; ctx.fillText(line, x+8, lineY+8);
+                    }
+                    ctx.fillStyle = style.textColor; ctx.fillText(line, x, lineY);
+                });
             }
+            setExportStatus({ step: 'rendering', progress: (time / audio.duration) * 100 });
+            if (time < audio.duration) requestAnimationFrame(drawFrame);
+            else recorder.stop();
         };
         requestAnimationFrame(drawFrame);
-
-    } catch (err) {
-        console.error("Export failed:", err);
-        setError("Video export failed. Please try again.");
-        setIsExporting(false);
-        setExportStatus({ step: 'idle', progress: 0 });
-    }
+    } catch (err) { console.error(err); setIsExporting(false); }
   }, [file, captions, backgroundImage, captionPosition, activeThemeConfig, aspectRatio]);
 
-
   return (
-    <div className="min-h-screen bg-gray-900 text-white font-sans p-4 sm:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto">
-        <header className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-cyan-400">
-            Singer
-          </h1>
+    <div className="min-h-screen p-4 sm:p-6 lg:p-12">
+      <div className="max-w-7xl mx-auto space-y-8">
+        <header className="flex justify-between items-center">
+          <h1 className="text-6xl mc-title mc-text-shadow">Singer</h1>
           {file && (
-            <button 
-              onClick={resetState} 
-              className="flex items-center gap-2 text-sm font-semibold bg-gray-700/50 hover:bg-gray-700 border border-gray-600/50 rounded-md px-4 py-2 transition-all duration-200 text-gray-300 hover:text-white hover:border-gray-500"
-            >
-              <RefreshCwIcon className="w-4 h-4" />
-              Start Over
+            <button onClick={resetState} className="mc-button text-xl">
+              <RefreshCwIcon className="w-6 h-6 mr-2" /> EXIT TO MENU
             </button>
           )}
         </header>
@@ -535,100 +416,64 @@ const App: React.FC = () => {
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2 space-y-6">
-                 <CaptionPreview 
-                    currentCaption={currentCaption} 
-                    backgroundImage={backgroundImage}
-                    customStyle={activeThemeStyle}
-                    captionPosition={captionPosition}
-                    aspectRatio={aspectRatio}
-                    textAlign={activeThemeConfig.textAlign}
-                 />
+                 <div className="mc-panel">
+                    <CaptionPreview 
+                        currentCaption={currentCaption} 
+                        backgroundImage={backgroundImage}
+                        customStyle={activeThemeStyle}
+                        captionPosition={captionPosition}
+                        onCaptionPositionChange={(pos) => setState({ captionPosition: pos })}
+                        aspectRatio={aspectRatio}
+                        textAlign={activeThemeConfig.textAlign}
+                        fontSize={activeThemeConfig.fontSize}
+                        onFontSizeChange={(size) => handleThemeConfigChange({ ...activeThemeConfig, fontSize: size })}
+                    />
+                 </div>
                  <audio
-                    ref={audioRef}
-                    src={audioSrc || ''}
-                    onLoadedMetadata={() => {
-                      if (audioRef.current) setDuration(audioRef.current.duration);
-                    }}
-                    onTimeUpdate={() => {
-                      if (audioRef.current && !isExporting) setCurrentTime(audioRef.current.currentTime);
-                    }}
-                    onPlay={() => setIsPlaying(true)}
-                    onPause={() => setIsPlaying(false)}
-                    onEnded={() => setIsPlaying(false)}
+                    ref={audioRef} src={audioSrc || ''}
+                    onLoadedMetadata={() => audioRef.current && setDuration(audioRef.current.duration)}
+                    onTimeUpdate={() => audioRef.current && !isExporting && setCurrentTime(audioRef.current.currentTime)}
+                    onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)} onEnded={() => setIsPlaying(false)}
                     className="hidden"
                   />
-                 <Timeline 
-                    captions={captions}
-                    currentTime={currentTime}
-                    duration={duration}
-                    isPlaying={isPlaying}
-                    onPlayPause={() => {
-                      if (!audioRef.current) return;
-                      if (isPlaying) {
-                        audioRef.current.pause();
-                      } else {
-                        if (audioRef.current.ended) {
-                           audioRef.current.currentTime = 0;
-                        }
-                        audioRef.current.play();
-                      }
-                    }}
-                    onSeek={handleSeek}
-                    onUpdateCaptionTime={handleUpdateCaptionTime}
-                 />
+                 <div className="mc-panel">
+                    <Timeline 
+                        captions={captions} currentTime={currentTime} duration={duration} isPlaying={isPlaying}
+                        onPlayPause={() => {
+                          if (!audioRef.current) return;
+                          isPlaying ? audioRef.current.pause() : audioRef.current.play();
+                        }}
+                        onSeek={handleSeek} onUpdateCaptionTime={handleUpdateCaptionTime}
+                    />
+                 </div>
               </div>
-              <div className="lg:col-span-1 bg-gray-800/50 rounded-lg backdrop-blur-sm border border-gray-700/50 flex flex-col">
+              <div className="lg:col-span-1 mc-panel flex flex-col">
                 {!captions ? (
-                  <div className="p-6 space-y-6">
-                    <div>
-                        <h2 className="text-lg font-semibold mb-2 text-cyan-300">1. Generate Captions</h2>
-                        <p className="text-sm text-gray-400 mb-4">
-                            The AI will listen to your audio and automatically generate synchronized lyrics.
+                  <div className="p-4 space-y-8 flex flex-col items-center justify-center h-full">
+                    <div className="text-center">
+                        <h2 className="text-3xl font-bold mb-4 mc-text-shadow text-[#ffff55]">READY FOR ANALYSIS?</h2>
+                        <p className="text-xl text-[#ffffff] font-mono mc-text-shadow mb-8">
+                            THE AI WILL CRAFT LYRICS BASED ON THE MUSIC VIBE.
                         </p>
                     </div>
-                  
-                    {error && (
-                      <div className="bg-red-900/50 border border-red-500/50 text-red-300 p-3 rounded-md flex items-center text-sm">
-                        <AlertTriangleIcon className="w-5 h-5 mr-2" />
-                        {error}
-                      </div>
-                    )}
-                  
-                    <button
-                      onClick={handleGenerateClick}
-                      disabled={isLoading || !file}
-                      className="w-full flex items-center justify-center bg-cyan-600 hover:bg-cyan-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-md transition-all duration-300"
-                    >
-                      {isLoading ? <><LoaderIcon /> Generating...</> : '✨ Generate Captions'}
+                    {error && <div className="mc-panel bg-[#FF5555] text-white p-4 mc-text-shadow">{error}</div>}
+                    <button onClick={handleGenerateClick} disabled={isLoading || !file} className="mc-button w-full text-2xl py-6">
+                      {isLoading ? <span className="mc-pulse">ANALYZING...</span> : 'START GENERATION'}
                     </button>
                   </div>
                 ) : (
                   <CaptionEditor
-                    captions={captions}
-                    theme={theme}
+                    captions={captions} theme={theme}
                     onThemeChange={(newTheme) => setState({ theme: newTheme })}
-                    onUpdateCaption={handleUpdateCaptionText}
-                    onAddCaption={handleAddCaption}
-                    onDeleteCaption={handleDeleteCaption}
-                    onAcceptEmoji={handleAcceptEmoji}
-                    onRejectEmoji={handleRejectEmoji}
+                    onUpdateCaption={handleUpdateCaptionText} onAddCaption={handleAddCaption} onDeleteCaption={handleDeleteCaption}
+                    onAcceptEmoji={handleAcceptEmoji} onRejectEmoji={handleRejectEmoji}
                     onExportSrt={() => { setModalContent('srt'); setIsModalOpen(true); }}
-                    onExportMp4={handleExportMp4}
-                    isExporting={isExporting}
-                    onSeek={handleSeek}
-                    activeThemeConfig={activeThemeConfig}
-                    onActiveThemeConfigChange={handleThemeConfigChange}
-                    captionPosition={captionPosition}
-                    onCaptionPositionChange={(pos) => setState({ captionPosition: pos })}
-                    backgroundImage={backgroundImage}
-                    onBackgroundImageSelect={handleBackgroundImageSelect}
-                    onRemoveBackgroundImage={handleRemoveBackgroundImage}
-                    aspectRatio={aspectRatio}
-                    onAspectRatioChange={(ratio) => setState({ aspectRatio: ratio })}
-                    onUndo={handleUndo}
-                    onRedo={handleRedo}
-                    canUndo={canUndo}
-                    canRedo={canRedo}
+                    onExportMp4={handleExportMp4} isExporting={isExporting} onSeek={handleSeek}
+                    activeThemeConfig={activeThemeConfig} onActiveThemeConfigChange={handleThemeConfigChange}
+                    captionPosition={captionPosition} onCaptionPositionChange={(pos) => setState({ captionPosition: pos })}
+                    backgroundImage={backgroundImage} onBackgroundImageSelect={handleBackgroundImageSelect} onRemoveBackgroundImage={handleRemoveBackgroundImage}
+                    aspectRatio={aspectRatio} onAspectRatioChange={(ratio) => setState({ aspectRatio: ratio })}
+                    onUndo={handleUndo} onRedo={handleRedo} canUndo={canUndo} canRedo={canRedo}
                   />
                 )}
               </div>
@@ -637,12 +482,8 @@ const App: React.FC = () => {
         </main>
         
         <ExportModal 
-          isOpen={isModalOpen} 
-          onClose={() => setIsModalOpen(false)} 
-          captions={captions}
-          isExporting={isExporting}
-          exportStatus={exportStatus}
-          modalContent={modalContent}
+          isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} captions={captions}
+          isExporting={isExporting} exportStatus={exportStatus} modalContent={modalContent}
         />
       </div>
     </div>

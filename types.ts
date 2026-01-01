@@ -5,9 +5,9 @@ export interface CaptionLine {
   emoji?: string;
 }
 
-export type ThemeName = 'neon' | 'gradient' | 'minimal' | 'cinematic' | 'signature';
+export type ThemeName = 'neon' | 'gradient' | 'minimal' | 'cinematic' | 'signature' | 'minecraft';
 
-export type FontFamily = 'Montserrat' | 'Poppins' | 'Fredoka' | 'Pacifico' | 'Lato' | 'Great Vibes' | 'Dancing Script';
+export type FontFamily = 'Montserrat' | 'Poppins' | 'Fredoka' | 'Pacifico' | 'Lato' | 'Great Vibes' | 'Dancing Script' | 'VT323';
 
 export interface ThemeConfig {
   textColor: string;
@@ -26,6 +26,7 @@ export interface ThemeConfig {
   gradientEnabled: boolean;
   gradientColor1: string;
   gradientColor2: string;
+  maxLines: 1 | 2;
 }
 
 export interface Theme {
@@ -35,10 +36,10 @@ export interface Theme {
   config: ThemeConfig;
 }
 
-export type CaptionPosition = 
-  | 'top-left' | 'top-center' | 'top-right'
-  | 'middle-left' | 'middle-center' | 'middle-right'
-  | 'bottom-left' | 'bottom-center' | 'bottom-right';
+export interface CaptionPosition {
+  x: number; // percentage 0-100
+  y: number; // percentage 0-100
+}
 
 export type AspectRatio = '16:9' | '9:16' | '1:1' | '4:5';
 

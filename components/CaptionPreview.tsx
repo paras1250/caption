@@ -74,11 +74,13 @@ export const CaptionPreview: React.FC<CaptionPreviewProps> = ({
       ref={containerRef}
       className={`${aspectClass} w-full bg-[#000000] overflow-hidden relative border-4 border-[#373737] cursor-crosshair group`}
     >
-      <img 
-        src={backgroundImage || "https://picsum.photos/1280/720?grayscale&blur=2"} 
-        alt="background" 
-        className="absolute inset-0 w-full h-full object-cover opacity-60 transition-opacity group-hover:opacity-80" 
-      />
+      {backgroundImage && (
+        <img 
+          src={backgroundImage} 
+          alt="background" 
+          className="absolute inset-0 w-full h-full object-cover opacity-60 transition-opacity group-hover:opacity-80" 
+        />
+      )}
       
       <div 
         className="absolute z-20 pointer-events-none select-none w-full flex justify-center"

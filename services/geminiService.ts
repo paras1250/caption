@@ -1,11 +1,13 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import type { CaptionLine } from '../types';
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
-
 // Utility to parse "mm:ss.ms" into seconds
 const parseTimestamp = (time: string): number => {
-  const [minutes, seconds] = time.split(':');
+  if (!time) return 0;
+  const parts = time.split(':');
+  if (parts.length < 2) return parseFloat(parts[0]) || 0;
+  const minutes = parts[0];
+  const seconds = parts[1];
   return parseInt(minutes, 10) * 60 + parseFloat(seconds);
 };
 
@@ -25,6 +27,14 @@ const fileToGenerativePart = async (file: File) => {
 };
 
 export const generateCaptions = async (file: File): Promise<CaptionLine[]> => {
+  /**
+   * CRITICAL: We instantiate GoogleGenAI inside the function rather than at the top level.
+   * This prevents the application from crashing with a blank screen during initial script load
+   * if the environment variable process.env.API_KEY is not yet available or is injected 
+   * asynchronously (a common issue in browser environments and certain deployment platforms).
+   */
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+
   const systemInstruction = `
     You are a world-class creative assistant specializing in analyzing audio files and generating synchronized song lyrics.
     Your task is to listen to an audio file and create original lyrics that perfectly match the music's mood, genre, and instrumental character.
@@ -49,8 +59,9 @@ export const generateCaptions = async (file: File): Promise<CaptionLine[]> => {
   
   const audioPart = await fileToGenerativePart(file);
 
+  // Using gemini-3-pro-preview for complex reasoning and creative tasks like music analysis and lyric generation.
   const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
+    model: "gemini-3-pro-preview",
     contents: { parts: [audioPart, {text: prompt}] },
     config: {
       systemInstruction: systemInstruction,

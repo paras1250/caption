@@ -26,7 +26,6 @@ const App: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [hasApiKey, setHasApiKey] = useState<boolean>(false);
   
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
@@ -51,29 +50,6 @@ const App: React.FC = () => {
   
   const { captions, theme, themeConfigs, backgroundImage, captionPosition, aspectRatio } = history.present;
   const activeThemeConfig = themeConfigs[theme];
-
-  // Check for API Key on mount
-  useEffect(() => {
-    const checkKey = async () => {
-      if (window.aistudio) {
-        const hasKey = await window.aistudio.hasSelectedApiKey();
-        setHasApiKey(hasKey);
-      } else {
-        // Fallback for non-AI Studio environments if process.env.API_KEY is manually set
-        setHasApiKey(!!process.env.API_KEY);
-      }
-    };
-    checkKey();
-  }, []);
-
-  const handleOpenKeySelector = async () => {
-    if (window.aistudio) {
-      await window.aistudio.openSelectKey();
-      // Assume success as per instructions to avoid race conditions
-      setHasApiKey(true);
-      setError(null);
-    }
-  };
 
   const setState = (newState: Partial<EditorState>, overwrite = false) => {
     setHistory(currentHistory => {
@@ -168,15 +144,7 @@ const App: React.FC = () => {
       }
     } catch (e: any) {
       console.error(e);
-      if (e.message?.includes('Requested entity was not found')) {
-        setHasApiKey(false);
-        setError('API Key is invalid or expired. Please re-select your key.');
-      } else if (e.message?.includes('API Key must be set')) {
-        setHasApiKey(false);
-        setError('API Key missing. Please configure it below.');
-      } else {
-        setError('Analysis failed. The file might be too large or incompatible.');
-      }
+      setError('Analysis failed. Try another audio track.');
     } finally {
       setIsLoading(false);
     }
@@ -487,42 +455,14 @@ const App: React.FC = () => {
                         </p>
                     </div>
 
-                    {!hasApiKey ? (
-                      <div className="mc-panel bg-[#ffff55] border-black p-4 space-y-4">
-                        <div className="flex items-center gap-2 text-black font-bold text-xl">
-                          <AlertCircleIcon className="w-6 h-6" />
-                          <span>API KEY REQUIRED</span>
-                        </div>
-                        <p className="text-black font-mono leading-tight">
-                          TO USE GEMINI 3 PRO ANALYSIS, YOU MUST CONFIGURE A PAID API KEY IN YOUR ENVIRONMENT.
-                        </p>
-                        <a 
-                          href="https://ai.google.dev/gemini-api/docs/billing" 
-                          target="_blank" 
-                          rel="noreferrer"
-                          className="block text-blue-800 underline font-mono text-sm"
-                        >
-                          LEARN ABOUT BILLING
-                        </a>
-                        <button 
-                          onClick={handleOpenKeySelector} 
-                          className="mc-button w-full text-black bg-white py-4 text-xl hover:bg-gray-100"
-                        >
-                          SET API KEY
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        {error && <div className="mc-panel bg-[#FF5555] text-white p-4 mc-text-shadow font-mono">{error}</div>}
-                        <button 
-                          onClick={handleGenerateClick} 
-                          disabled={isLoading || !file} 
-                          className="mc-button w-full text-2xl py-6"
-                        >
-                          {isLoading ? <span className="mc-pulse">ANALYZING...</span> : 'START GENERATION'}
-                        </button>
-                      </>
-                    )}
+                    {error && <div className="mc-panel bg-[#FF5555] text-white p-4 mc-text-shadow font-mono">{error}</div>}
+                    <button 
+                      onClick={handleGenerateClick} 
+                      disabled={isLoading || !file} 
+                      className="mc-button w-full text-2xl py-6"
+                    >
+                      {isLoading ? <span className="mc-pulse">ANALYZING...</span> : 'START GENERATION'}
+                    </button>
                   </div>
                 ) : (
                   <CaptionEditor

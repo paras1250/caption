@@ -27,12 +27,11 @@ const fileToGenerativePart = async (file: File) => {
 };
 
 export const generateCaptions = async (file: File): Promise<CaptionLine[]> => {
-  const apiKey = process.env.API_KEY;
-  if (!apiKey) {
-    throw new Error('API Key must be set when running in a browser. Please select a key via the UI.');
-  }
-
-  const ai = new GoogleGenAI({ apiKey });
+  /**
+   * We instantiate GoogleGenAI inside the function to ensure the API_KEY is accessed 
+   * at call time, preventing crashes during script initialization.
+   */
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
 
   const systemInstruction = `
     You are a world-class creative assistant specializing in analyzing audio files and generating synchronized song lyrics.
